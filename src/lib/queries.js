@@ -1,230 +1,196 @@
 import { supabase } from './supabase'
-import { charsToTokens, tokensToCostUsd } from './formatters'
-import { subDays, startOfDay, format } from 'date-fns'
+import { subDays, startOfDay, getISOWeek, getYear, format, differenceInDays, parseISO } from 'date-fns'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function dateStr(daysAgo) {
-  return format(subDays(new Date(), daysAgo), 'yyyy-MM-dd')
-}
 
 function isoStr(daysAgo) {
   return startOfDay(subDays(new Date(), daysAgo)).toISOString()
 }
 
-// ─── Conversations table (testing phase fallback) ────────────────────────────
-
-export async function getConversationStats(days = 30) {
-  const since = isoStr(days)
-
-  const { data, error } = await supabase
-    .from('n8n_chat_histories')
-    .select('session_id, message, created_at')
-    .gte('created_at', since)
-
-  if (error) { console.error('getConversationStats:', error); return null }
-
-  const rows = data || []
-  const humanRows = rows.filter(r => r.message?.type === 'human')
-  const aiRows    = rows.filter(r => r.message?.type === 'ai')
-  const toolRows  = rows.filter(r => r.message?.type === 'tool')
-
-  const uniqueUsers = new Set(rows.map(r => r.session_id)).size
-
-  // Token estimation from character counts
-  const totalChars  = rows.reduce((s, r) => s + (r.message?.content?.length || 0), 0)
-  const totalTokens = charsToTokens(totalChars)
-  const costUsd     = tokensToCostUsd(totalTokens)
-
-  return {
-    uniqueUsers,
-    humanMessages:  humanRows.length,
-    aiMessages:     aiRows.length,
-    toolCalls:      toolRows.length,
-    totalMessages:  rows.length,
-    totalTokens,
-    costUsd,
-    costSgd:        costUsd * 1.35,
-    rows,
-  }
+export function changePct(current, previous) {
+  if (!previous || previous === 0) return null
+  return ((current - previous) / previous) * 100
 }
 
-// Daily message counts derived from conversations table
-export async function getDailyFromConversations(days = 30) {
-  const since = isoStr(days)
+// Claude Sonnet 4.6: $3/1M input + $15/1M output, assume 60/40 split
+// Meta WhatsApp (SG, user-initiated): $0.0408 USD/conversation, first 1000/month free
+const CLAUDE_COST_PER_CHAR = (3 * 0.6 + 15 * 0.4) / 1_000_000 / 4  // per character
+const META_RATE_USD         = 0.0408
+const META_FREE_TIER        = 1000
+const USD_TO_SGD            = 1.35
 
-  const { data, error } = await supabase
-    .from('n8n_chat_histories')
-    .select('session_id, message, created_at')
-    .gte('created_at', since)
-    .order('created_at', { ascending: true })
+// Meta "conversation" = unique user-day (each day a user messages = 1 billed conversation)
+function calcMetaCost(userDays, periodDays) {
+  // rough monthly projection to subtract free tier
+  const monthlyRate     = (userDays / periodDays) * 30
+  const billableMonthly = Math.max(0, monthlyRate - META_FREE_TIER)
+  const dailyBillable   = (billableMonthly / 30) * periodDays
+  return dailyBillable * META_RATE_USD * USD_TO_SGD
+}
 
-  if (error) { console.error('getDailyFromConversations:', error); return [] }
+function calcClaudeCost(rows) {
+  const chars = rows.reduce((s, r) => s + (r.message?.content?.length || 0), 0)
+  return chars * CLAUDE_COST_PER_CHAR * USD_TO_SGD
+}
 
-  const rows = data || []
-  const byDay = {}
+// ─── Core fetch: all rows for a date range ──────────────────────────────────
 
-  rows.forEach(r => {
-    const day = r.created_at?.slice(0, 10)
-    if (!day) return
-    if (!byDay[day]) byDay[day] = { date: day, humanMessages: 0, aiMessages: 0, activeUsers: new Set(), toolCalls: 0, totalChars: 0 }
-    const type = r.message?.type
-    if (type === 'human') { byDay[day].humanMessages++; byDay[day].activeUsers.add(r.session_id) }
-    if (type === 'ai')    { byDay[day].aiMessages++; byDay[day].totalChars += (r.message?.content?.length || 0) }
-    if (type === 'tool')    byDay[day].toolCalls++
-    byDay[day].totalChars += (r.message?.content?.length || 0)
+async function fetchRows(from, to) {
+  let q = supabase.from('n8n_chat_histories').select('session_id, message, created_at').gte('created_at', from)
+  if (to) q = q.lt('created_at', to)
+  const { data, error } = await q
+  if (error) { console.error('fetchRows:', error); return [] }
+  return data || []
+}
+
+// ─── Derive period metrics from raw rows ─────────────────────────────────────
+
+function deriveMetrics(rows, periodDays) {
+  const human     = rows.filter(r => r.message?.type === 'human')
+  const users     = new Set(human.map(r => r.session_id))
+  const userDays  = new Set(human.map(r => `${r.session_id}::${r.created_at?.slice(0, 10)}`))
+
+  const conversations = human.length           // 1 message = 1 conversation
+  const uniqueUsers   = users.size
+  const claudeCostSgd = calcClaudeCost(rows)
+  const metaCostSgd   = calcMetaCost(userDays.size, periodDays)
+  const totalCostSgd  = claudeCostSgd + metaCostSgd
+  const costPerUser   = uniqueUsers > 0 ? totalCostSgd / uniqueUsers : 0
+
+  return { conversations, uniqueUsers, claudeCostSgd, metaCostSgd, totalCostSgd, costPerUser, rows, humanRows: human }
+}
+
+// ─── Main analytics query: current + previous period ────────────────────────
+
+export async function getAnalytics(days) {
+  const now          = new Date()
+  const currentFrom  = isoStr(days)
+  const previousFrom = isoStr(days * 2)
+  const previousTo   = currentFrom
+
+  const [currentRows, previousRows, escalationData] = await Promise.all([
+    fetchRows(currentFrom, null),
+    fetchRows(previousFrom, previousTo),
+    getEscalations(days),
+  ])
+
+  const current  = deriveMetrics(currentRows, days)
+  const previous = deriveMetrics(previousRows, days)
+
+  return { current, previous, days, escalation: escalationData }
+}
+
+// ─── Weekly breakdown for bar chart ─────────────────────────────────────────
+
+export async function getWeeklyBreakdown(days) {
+  const rows = await fetchRows(isoStr(days), null)
+  const human = rows.filter(r => r.message?.type === 'human')
+
+  const weekMap = {}
+  human.forEach(r => {
+    if (!r.created_at) return
+    const d   = parseISO(r.created_at)
+    const key = `${getYear(d)}-W${String(getISOWeek(d)).padStart(2, '0')}`
+    if (!weekMap[key]) weekMap[key] = { week: key, conversations: 0, users: new Set() }
+    weekMap[key].conversations++
+    weekMap[key].users.add(r.session_id)
   })
 
-  return Object.values(byDay)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map(d => ({
-      ...d,
-      activeUsers: d.activeUsers.size,
-      costSgd: tokensToCostUsd(charsToTokens(d.totalChars)) * 1.35,
+  return Object.values(weekMap)
+    .sort((a, b) => a.week.localeCompare(b.week))
+    .map(w => ({
+      week:          w.week.replace(/^\d{4}-/, ''),  // "W24"
+      conversations: w.conversations,
+      users:         w.users.size,
+      avgPerUser:    w.users.size > 0 ? +(w.conversations / w.users.size).toFixed(1) : 0,
     }))
 }
 
-// Per-user stats for retention (from conversations)
-export async function getUserRetentionData() {
+// ─── Retention Week 1–5 ──────────────────────────────────────────────────────
+
+export async function getRetention() {
   const { data, error } = await supabase
     .from('n8n_chat_histories')
     .select('session_id, created_at')
     .eq('message->>type', 'human')
     .order('created_at', { ascending: true })
 
-  if (error) { console.error('getUserRetentionData:', error); return [] }
-
+  if (error) { console.error('getRetention:', error); return [] }
   const rows = data || []
-  const userDays = {}
 
+  // Per user: first message date + all active days
+  const userMap = {}
   rows.forEach(r => {
     const id  = r.session_id
     const day = r.created_at?.slice(0, 10)
     if (!day) return
-    if (!userDays[id]) userDays[id] = { firstDay: day, days: new Set() }
-    userDays[id].days.add(day)
+    if (!userMap[id]) userMap[id] = { firstDay: day, days: new Set() }
+    userMap[id].days.add(day)
   })
 
-  return Object.entries(userDays).map(([id, u]) => ({
-    sessionId: id,
-    firstDay:  u.firstDay,
-    days:      [...u.days].sort(),
-    totalSessions: u.days.size,
-  }))
+  // Group users into weekly cohorts by first message
+  const cohortMap = {}
+  Object.entries(userMap).forEach(([id, u]) => {
+    const d      = parseISO(u.firstDay)
+    const cohort = `${getYear(d)}-W${String(getISOWeek(d)).padStart(2, '0')}`
+    if (!cohortMap[cohort]) cohortMap[cohort] = []
+    cohortMap[cohort].push({ firstDay: u.firstDay, days: [...u.days] })
+  })
+
+  const WEEKS = [1, 2, 3, 4, 5]
+
+  return Object.entries(cohortMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([cohort, users]) => {
+      const retention = WEEKS.map(wk => {
+        const minDay = (wk - 1) * 7 + 1
+        const maxDay = wk * 7
+        const returned = users.filter(u =>
+          u.days.some(d => {
+            const diff = differenceInDays(parseISO(d), parseISO(u.firstDay))
+            return diff >= minDay && diff <= maxDay
+          })
+        ).length
+        return users.length > 0 ? Math.round((returned / users.length) * 100) : null
+      })
+      return { cohort: cohort.replace(/^\d{4}-/, ''), users: users.length, retention }
+    })
 }
 
-// Hourly usage heatmap (from conversations)
-export async function getHourlyHeatmap(days = 30) {
+// ─── Escalations ─────────────────────────────────────────────────────────────
+
+export async function getEscalations(days) {
   const since = isoStr(days)
+  const prevSince = isoStr(days * 2)
 
-  const { data, error } = await supabase
-    .from('n8n_chat_histories')
-    .select('created_at')
-    .gte('created_at', since)
-    .eq('message->>type', 'human')
-
-  if (error) { console.error('getHourlyHeatmap:', error); return [] }
-
-  const grid = {}
-  ;(data || []).forEach(r => {
-    const d   = new Date(r.created_at)
-    const dow = d.getDay()  // 0=Sun
-    const hr  = d.getHours()
-    const key = `${dow}-${hr}`
-    grid[key] = (grid[key] || 0) + 1
-  })
-
-  return Object.entries(grid).map(([key, count]) => {
-    const [dow, hr] = key.split('-').map(Number)
-    return { dow, hr, count }
-  })
-}
-
-// ─── daily_stats table (when n8n starts logging) ────────────────────────────
-
-export async function getDailyStats(days = 30) {
-  const since = dateStr(days)
-
-  const { data, error } = await supabase
-    .from('daily_stats')
-    .select('*')
-    .gte('date', since)
-    .order('date', { ascending: true })
-
-  if (error) { console.error('getDailyStats:', error); return [] }
-  return data || []
-}
-
-export async function hasDailyStatsData() {
-  const { count } = await supabase
-    .from('daily_stats')
-    .select('*', { count: 'exact', head: true })
-  return (count || 0) > 0
-}
-
-// ─── api_costs table ─────────────────────────────────────────────────────────
-
-export async function getApiCosts(days = 30) {
-  const since = dateStr(days)
-
-  const { data, error } = await supabase
-    .from('api_costs')
-    .select('*')
-    .gte('date', since)
-    .order('date', { ascending: true })
-
-  if (error) { console.error('getApiCosts:', error); return [] }
-  return (data || []).map(r => ({
-    ...r,
-    cost_sgd:   (r.cost_usd || 0) * 1.35,
-  }))
-}
-
-// ─── sessions table ──────────────────────────────────────────────────────────
-
-export async function getSessionStats(days = 30) {
-  const since = isoStr(days)
-
-  const { data, error } = await supabase
+  // Try sessions table first
+  const { data: current, error: e1 } = await supabase
     .from('sessions')
-    .select('*')
+    .select('id, escalated, started_at')
     .gte('started_at', since)
 
-  if (error) { console.error('getSessionStats:', error); return null }
+  const { data: previous, error: e2 } = await supabase
+    .from('sessions')
+    .select('id, escalated, started_at')
+    .gte('started_at', prevSince)
+    .lt('started_at', since)
 
-  const rows = data || []
-  const escalated = rows.filter(r => r.escalated)
-  const newUsers  = rows.filter(r => r.is_new_user)
-
-  return {
-    total:      rows.length,
-    escalated:  escalated.length,
-    newUsers:   newUsers.length,
-    returning:  rows.length - newUsers.length,
-    escalationRate: rows.length ? (escalated.length / rows.length * 100) : 0,
+  if (!e1 && current) {
+    const currEsc  = (current || []).filter(s => s.escalated).length
+    const prevEsc  = (previous || []).filter(s => s.escalated).length
+    const currTotal = current.length
+    const prevTotal = previous.length
+    return {
+      source:       'sessions',
+      current:      currEsc,
+      previous:     prevEsc,
+      currentTotal: currTotal,
+      previousTotal: prevTotal,
+      currentRate:  currTotal > 0 ? (currEsc / currTotal) * 100 : 0,
+      previousRate: prevTotal > 0 ? (prevEsc / prevTotal) * 100 : 0,
+    }
   }
-}
 
-// ─── Composite: pick the best data source ───────────────────────────────────
-
-export async function getOverviewData(days = 30) {
-  const [hasStats, convStats, daily, sessionStats, apiCosts] = await Promise.all([
-    hasDailyStatsData(),
-    getConversationStats(days),
-    getDailyStats(days),
-    getSessionStats(days),
-    getApiCosts(days),
-  ])
-
-  // Derive from conversations table as fallback
-  const convDaily = await getDailyFromConversations(days)
-
-  return {
-    hasStats,
-    convStats,
-    daily:        hasStats && daily.length ? daily : convDaily,
-    sessionStats,
-    apiCosts:     apiCosts.length ? apiCosts : [],
-    isTestingMode: !hasStats || daily.length === 0,
-  }
+  // Fallback: no escalation data yet
+  return { source: 'none', current: 0, previous: 0, currentTotal: 0, previousTotal: 0, currentRate: 0, previousRate: 0 }
 }
