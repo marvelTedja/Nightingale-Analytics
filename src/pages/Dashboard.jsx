@@ -64,18 +64,13 @@ function Section({ title, subtitle }) {
   )
 }
 
-// ─── Retention table ──────────────────────────────────────────────────────────
-function RetentionTable({ data = [], loading }) {
-  function cellStyle(pct) {
-    if (pct === null || pct === undefined) return 'bg-gray-50 text-gray-300'
-    if (pct >= 60) return 'bg-teal-600 text-white font-semibold'
-    if (pct >= 40) return 'bg-teal-400 text-white'
-    if (pct >= 20) return 'bg-teal-200 text-teal-800'
-    if (pct > 0)   return 'bg-teal-100 text-teal-700'
-    return 'bg-gray-50 text-gray-300'
-  }
-
-  if (loading) return <div className="animate-pulse h-40 bg-gray-100 rounded-lg" />
+// ─── Retention (simple per-week) ─────────────────────────────────────────────
+function RetentionSimple({ data = [], loading }) {
+  if (loading) return (
+    <div className="animate-pulse flex gap-4">
+      {[0,1,2,3,4,5].map(i => <div key={i} className="h-20 flex-1 bg-gray-100 rounded-xl" />)}
+    </div>
+  )
 
   if (!data.length) return (
     <p className="text-gray-400 text-sm py-8 text-center">
@@ -83,43 +78,48 @@ function RetentionTable({ data = [], loading }) {
     </p>
   )
 
+  const totalUsers = data.reduce((s, c) => s + c.users, 0)
+
+  // For each week slot, compute: (users who returned across all cohorts) / totalUsers
+  const weekRates = [0, 1, 2, 3, 4].map(wk => {
+    let returned = 0
+    let eligible = 0
+    data.forEach(cohort => {
+      const pct = cohort.retention[wk]
+      if (pct !== null && pct !== undefined) {
+        returned += Math.round((pct / 100) * cohort.users)
+        eligible += cohort.users
+      }
+    })
+    return eligible > 0 ? Math.round((returned / eligible) * 100) : null
+  })
+
+  function tileColor(pct) {
+    if (pct === null) return 'bg-gray-50 text-gray-300'
+    if (pct >= 60) return 'bg-teal-600 text-white'
+    if (pct >= 40) return 'bg-teal-400 text-white'
+    if (pct >= 20) return 'bg-teal-100 text-teal-800'
+    if (pct > 0)   return 'bg-teal-50 text-teal-600'
+    return 'bg-gray-50 text-gray-400'
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="border-b border-gray-100">
-            <th className="text-left text-gray-400 font-medium py-2 pr-6 text-xs whitespace-nowrap">Cohort</th>
-            <th className="text-center text-gray-400 font-medium py-2 px-3 text-xs">Users</th>
-            {['Wk 1','Wk 2','Wk 3','Wk 4','Wk 5'].map(w => (
-              <th key={w} className="text-center text-gray-400 font-medium py-2 px-3 text-xs">{w}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map(row => (
-            <tr key={row.cohort} className="border-b border-gray-50">
-              <td className="text-gray-700 text-xs py-2 pr-6 font-medium">{row.cohort}</td>
-              <td className="text-center text-gray-600 text-xs py-2 px-3">{row.users}</td>
-              {row.retention.map((pct, i) => (
-                <td key={i} className="py-1.5 px-2">
-                  <div className={`rounded-md px-2 py-1.5 text-center text-xs ${cellStyle(pct)}`}>
-                    {pct !== null ? `${pct}%` : '—'}
-                  </div>
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
-        <span className="text-gray-400 text-xs">Retention:</span>
-        {[['≥60%','bg-teal-600'],['40–60%','bg-teal-400'],['20–40%','bg-teal-200'],['<20%','bg-gray-100']].map(([l, c]) => (
-          <div key={l} className="flex items-center gap-1.5">
-            <div className={`w-3 h-3 rounded ${c}`}/>
-            <span className="text-gray-400 text-xs">{l}</span>
-          </div>
-        ))}
+    <div className="flex gap-4 items-stretch">
+      {/* Total users tile */}
+      <div className="flex flex-col justify-center bg-gray-50 rounded-xl px-5 py-4 min-w-[90px]">
+        <p className="text-2xl font-bold text-gray-900">{totalUsers}</p>
+        <p className="text-gray-400 text-xs mt-1">total users</p>
       </div>
+
+      <div className="w-px bg-gray-100 self-stretch" />
+
+      {/* Week 1–5 tiles */}
+      {weekRates.map((pct, i) => (
+        <div key={i} className={`flex-1 flex flex-col items-center justify-center rounded-xl py-4 ${tileColor(pct)}`}>
+          <p className="text-xl font-bold">{pct !== null ? `${pct}%` : '—'}</p>
+          <p className="text-xs mt-1 opacity-70">Week {i + 1}</p>
+        </div>
+      ))}
     </div>
   )
 }
@@ -221,48 +221,32 @@ export default function Dashboard() {
           subtitle="1 message sent = 1 conversation · shows how regularly users engage"
         />
         {loading ? (
-          <div className="animate-pulse h-52 bg-gray-100 rounded-lg" />
+          <div className="animate-pulse flex gap-8">
+            {[1,2,3].map(i => <div key={i} className="h-14 w-32 bg-gray-100 rounded-lg" />)}
+          </div>
         ) : weekly.length === 0 ? (
-          <p className="text-gray-400 text-sm py-12 text-center">No data yet</p>
+          <p className="text-gray-400 text-sm py-4 text-center">No data yet</p>
         ) : (
-          <>
-            {/* Summary numbers */}
-            <div className="flex items-center gap-8 mb-4 pb-4 border-b border-gray-100">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {weekly.length > 0
-                    ? (weekly.reduce((s, w) => s + w.avgPerUser, 0) / weekly.length).toFixed(1)
-                    : '—'}
-                </p>
-                <p className="text-gray-400 text-xs mt-0.5">avg convos/user/week</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {weekly.length > 0
-                    ? Math.round(weekly.reduce((s, w) => s + w.conversations, 0) / weekly.length)
-                    : '—'}
-                </p>
-                <p className="text-gray-400 text-xs mt-0.5">avg total convos/week</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {curr?.uniqueUsers ?? '—'}
-                </p>
-                <p className="text-gray-400 text-xs mt-0.5">unique users</p>
-              </div>
+          <div className="flex items-center gap-12">
+            <div>
+              <p className="text-3xl font-bold text-gray-900">
+                {(weekly.reduce((s, w) => s + w.avgPerUser, 0) / weekly.length).toFixed(1)}
+              </p>
+              <p className="text-gray-400 text-sm mt-1">avg convos/user/week</p>
             </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={weekly} margin={{ top: 4, right: 4, bottom: 4, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.grid} />
-                <XAxis dataKey="week" tick={{ fontSize: 11, fill: C.text }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: C.text }} tickLine={false} axisLine={false} />
-                <Tooltip content={<Tip />} />
-                <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280' }} />
-                <Bar dataKey="conversations" name="Total convos" fill={C.teal}  radius={[3,3,0,0]} maxBarSize={32} />
-                <Bar dataKey="avgPerUser"    name="Avg / user"   fill={C.blue} radius={[3,3,0,0]} maxBarSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
-          </>
+            <div className="w-px h-12 bg-gray-100" />
+            <div>
+              <p className="text-3xl font-bold text-gray-900">
+                {Math.round(weekly.reduce((s, w) => s + w.conversations, 0) / weekly.length)}
+              </p>
+              <p className="text-gray-400 text-sm mt-1">avg total convos/week</p>
+            </div>
+            <div className="w-px h-12 bg-gray-100" />
+            <div>
+              <p className="text-3xl font-bold text-gray-900">{curr?.uniqueUsers ?? '—'}</p>
+              <p className="text-gray-400 text-sm mt-1">unique users</p>
+            </div>
+          </div>
         )}
       </div>
 
@@ -270,9 +254,9 @@ export default function Dashboard() {
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-4">
         <Section
           title="Week 1–5 Retention"
-          subtitle="% of users from each cohort who returned each subsequent week"
+          subtitle="% of all users who came back each week after their first message"
         />
-        <RetentionTable data={retention} loading={loading} />
+        <RetentionSimple data={retention} loading={loading} />
       </div>
 
       {/* ── 4. Cost breakdown ── */}
