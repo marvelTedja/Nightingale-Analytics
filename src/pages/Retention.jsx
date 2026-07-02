@@ -7,19 +7,19 @@ import RetentionHeatmap from '../components/charts/RetentionHeatmap'
 import { shortDate } from '../lib/formatters'
 
 const CHART_COLORS = {
-  primary:   '#14b8a6',
-  secondary: '#3b82f6',
-  grid:      '#27272a',
-  text:      '#71717a',
+  primary:   '#0d9488',
+  secondary: '#2563eb',
+  grid:      '#e5e7eb',
+  text:      '#9ca3af',
 }
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-xl">
-      <p className="text-zinc-400 text-xs mb-2">{label}</p>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+      <p className="text-gray-500 text-xs mb-2">{label}</p>
       {payload.map((e, i) => (
-        <p key={i} className="text-xs font-medium" style={{ color: e.color }}>
+        <p key={i} className="text-xs font-medium text-gray-700">
           {e.name}: {e.value}
         </p>
       ))}
@@ -60,30 +60,30 @@ export default function Retention() {
       {/* KPI row */}
       <div className="grid grid-cols-3 gap-4">
         <div className="card p-5">
-          <p className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-2">Total Unique Users</p>
-          <p className="text-3xl font-bold text-white">{retentionRows.length || data?.convStats?.uniqueUsers || '—'}</p>
-          <p className="text-zinc-500 text-xs mt-1">All time</p>
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-2">Total Unique Users</p>
+          <p className="text-3xl font-bold text-gray-900">{retentionRows.length || data?.convStats?.uniqueUsers || '—'}</p>
+          <p className="text-gray-400 text-xs mt-1">All time</p>
         </div>
         <div className="card p-5">
-          <p className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-2">Sticky Users (5+ sessions)</p>
-          <p className="text-3xl font-bold text-white">{stickyUsers}</p>
-          <p className="text-zinc-500 text-xs mt-1">{stickyPct}% of total users</p>
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-2">Sticky Users (5+ sessions)</p>
+          <p className="text-3xl font-bold text-gray-900">{stickyUsers}</p>
+          <p className="text-gray-400 text-xs mt-1">{stickyPct}% of total users</p>
         </div>
         <div className="card p-5">
-          <p className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-2">Avg Sessions / User</p>
-          <p className="text-3xl font-bold text-white">
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-2">Avg Sessions / User</p>
+          <p className="text-3xl font-bold text-gray-900">
             {retentionRows.length
               ? (retentionRows.reduce((s, u) => s + u.totalSessions, 0) / retentionRows.length).toFixed(1)
               : '—'
             }
           </p>
-          <p className="text-zinc-500 text-xs mt-1">All time average</p>
+          <p className="text-gray-400 text-xs mt-1">All time average</p>
         </div>
       </div>
 
       {/* Retention cohort heatmap */}
       <div className="card p-5">
-        <h3 className="text-white text-sm font-semibold mb-1">Cohort Retention</h3>
+        <h3 className="text-gray-900 text-sm font-semibold mb-1">Cohort Retention</h3>
         <p className="text-zinc-500 text-xs mb-5">
           Percentage of users from each weekly cohort who returned on Day 1, 3, 7, 14, and 30
         </p>
@@ -94,12 +94,12 @@ export default function Retention() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* New vs Returning */}
         <div className="card p-5">
-          <h3 className="text-white text-sm font-semibold mb-1">New vs Returning Users</h3>
-          <p className="text-zinc-500 text-xs mb-4">Daily breakdown of first-time vs returning users</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">New vs Returning Users</h3>
+          <p className="text-gray-400 text-xs mb-4">Daily breakdown of first-time vs returning users</p>
           {loading ? (
             <div className="skeleton h-52 rounded" />
           ) : !hasStats ? (
-            <div className="flex items-center justify-center h-52 text-zinc-600 text-sm text-center px-8">
+            <div className="flex items-center justify-center h-52 text-gray-400 text-sm text-center px-8">
               Available after n8n logging is active — see setup guide
             </div>
           ) : (
@@ -119,12 +119,12 @@ export default function Retention() {
 
         {/* Avg sessions per user */}
         <div className="card p-5">
-          <h3 className="text-white text-sm font-semibold mb-1">Avg Sessions per User</h3>
-          <p className="text-zinc-500 text-xs mb-4">Daily average sessions per active user</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">Avg Sessions per User</h3>
+          <p className="text-gray-400 text-xs mb-4">Daily average sessions per active user</p>
           {loading ? (
             <div className="skeleton h-52 rounded" />
           ) : !hasStats ? (
-            <div className="flex items-center justify-center h-52 text-zinc-600 text-sm text-center px-8">
+            <div className="flex items-center justify-center h-52 text-gray-400 text-sm text-center px-8">
               Available after n8n logging is active — see setup guide
             </div>
           ) : (

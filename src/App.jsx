@@ -11,7 +11,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AnalyticsProvider>
-        <div className="flex h-screen overflow-hidden bg-zinc-950">
+        <div className="flex h-screen overflow-hidden bg-gray-50">
           <Sidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
             <TopBar />

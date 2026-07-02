@@ -10,15 +10,15 @@ const NAV = [
 
 export default function Sidebar() {
   return (
-    <aside className="w-56 bg-zinc-900 border-r border-zinc-800 flex flex-col shrink-0">
+    <aside className="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0 shadow-sm">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-zinc-800">
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-200">
         <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center shrink-0">
           <span className="text-white text-sm font-bold">N</span>
         </div>
         <div>
-          <p className="text-white text-sm font-semibold leading-none">Nightingale</p>
-          <p className="text-zinc-500 text-xs mt-0.5">Analytics</p>
+          <p className="text-gray-900 text-sm font-semibold leading-none">Nightingale</p>
+          <p className="text-gray-400 text-xs mt-0.5">Analytics</p>
         </div>
       </div>
 
@@ -31,8 +31,8 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-teal-500/10 text-teal-400'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                  ? 'bg-teal-50 text-teal-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`
             }
           >
@@ -43,9 +43,9 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-zinc-800">
-        <p className="text-zinc-600 text-xs">Nightingale Pediatrics</p>
-        <p className="text-zinc-700 text-xs">Singapore · Internal Use</p>
+      <div className="px-4 py-4 border-t border-gray-200">
+        <p className="text-gray-400 text-xs">Nightingale Pediatrics</p>
+        <p className="text-gray-300 text-xs">Singapore · Internal Use</p>
       </div>
     </aside>
   )

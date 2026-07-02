@@ -6,20 +6,20 @@ import { useAnalytics } from '../hooks/useAnalytics'
 import { sgd, num, compact, shortDate, tokensToCostUsd, usdToSgd } from '../lib/formatters'
 
 const CHART_COLORS = {
-  primary:   '#14b8a6',
-  secondary: '#3b82f6',
-  amber:     '#f59e0b',
-  grid:      '#27272a',
-  text:      '#71717a',
+  primary:   '#0d9488',
+  secondary: '#2563eb',
+  amber:     '#d97706',
+  grid:      '#e5e7eb',
+  text:      '#9ca3af',
 }
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-xl">
-      <p className="text-zinc-400 text-xs mb-2">{label}</p>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+      <p className="text-gray-500 text-xs mb-2">{label}</p>
       {payload.map((e, i) => (
-        <p key={i} className="text-xs font-medium" style={{ color: e.color }}>
+        <p key={i} className="text-xs font-medium text-gray-700">
           {e.name}: {typeof e.value === 'number' && e.name.includes('S$') ? `S$${e.value.toFixed(2)}` : e.value}
         </p>
       ))}
@@ -105,9 +105,9 @@ export default function Costs() {
           { label: 'Projected Month Cost',     value: sgd(projectedMonthCost),      sub: 'linear projection' },
         ].map(({ label, value, sub }) => (
           <div key={label} className="card p-5">
-            <p className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-2">{label}</p>
-            <p className="text-3xl font-bold text-white">{loading ? '—' : value}</p>
-            <p className="text-zinc-500 text-xs mt-1">{sub}</p>
+            <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-2">{label}</p>
+            <p className="text-3xl font-bold text-gray-900">{loading ? '—' : value}</p>
+            <p className="text-gray-400 text-xs mt-1">{sub}</p>
           </div>
         ))}
       </div>
@@ -115,12 +115,12 @@ export default function Costs() {
       {/* Monthly spend bar + cost per conversation */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="card p-5">
-          <h3 className="text-white text-sm font-semibold mb-1">Monthly AI Spend (SGD)</h3>
-          <p className="text-zinc-500 text-xs mb-4">Total spend per calendar month</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">Monthly AI Spend (SGD)</h3>
+          <p className="text-gray-400 text-xs mb-4">Total spend per calendar month</p>
           {loading ? (
             <div className="skeleton h-52 rounded" />
           ) : monthlyData.length === 0 ? (
-            <div className="flex items-center justify-center h-52 text-zinc-600 text-sm">No data yet</div>
+            <div className="flex items-center justify-center h-52 text-gray-400 text-sm">No data yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={monthlyData} margin={{ top: 4, right: 4, bottom: 4, left: -10 }}>
@@ -135,12 +135,12 @@ export default function Costs() {
         </div>
 
         <div className="card p-5">
-          <h3 className="text-white text-sm font-semibold mb-1">Cost per Conversation (SGD)</h3>
-          <p className="text-zinc-500 text-xs mb-4">Daily average cost per bot session</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">Cost per Conversation (SGD)</h3>
+          <p className="text-gray-400 text-xs mb-4">Daily average cost per bot session</p>
           {loading ? (
             <div className="skeleton h-52 rounded" />
           ) : !hasStats ? (
-            <div className="flex items-center justify-center h-52 text-zinc-600 text-sm text-center px-8">
+            <div className="flex items-center justify-center h-52 text-gray-400 text-sm text-center px-8">
               Available after n8n logging is active
             </div>
           ) : (
@@ -160,12 +160,12 @@ export default function Costs() {
       {/* Daily cost + token pie */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card p-5 lg:col-span-2">
-          <h3 className="text-white text-sm font-semibold mb-1">Daily AI Spend (SGD)</h3>
-          <p className="text-zinc-500 text-xs mb-4">Cost in SGD per day</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">Daily AI Spend (SGD)</h3>
+          <p className="text-gray-400 text-xs mb-4">Cost in SGD per day</p>
           {loading ? (
             <div className="skeleton h-52 rounded" />
           ) : costChartData.length === 0 ? (
-            <div className="flex items-center justify-center h-52 text-zinc-600 text-sm">No data yet</div>
+            <div className="flex items-center justify-center h-52 text-gray-400 text-sm">No data yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={costChartData} margin={{ top: 4, right: 4, bottom: 4, left: -10 }}>
@@ -180,12 +180,12 @@ export default function Costs() {
         </div>
 
         <div className="card p-5">
-          <h3 className="text-white text-sm font-semibold mb-1">Token Breakdown</h3>
-          <p className="text-zinc-500 text-xs mb-4">Input vs output token split</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">Token Breakdown</h3>
+          <p className="text-gray-400 text-xs mb-4">Input vs output token split</p>
           {loading ? (
             <div className="skeleton h-52 rounded" />
           ) : totalTokens === 0 ? (
-            <div className="flex items-center justify-center h-52 text-zinc-600 text-sm text-center">No token data yet</div>
+            <div className="flex items-center justify-center h-52 text-gray-400 text-sm text-center">No token data yet</div>
           ) : (
             <div className="flex flex-col items-center">
               <ResponsiveContainer width="100%" height={160}>
@@ -193,7 +193,7 @@ export default function Costs() {
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
                     {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => compact(v) + ' tokens'} contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }} />
+                  <Tooltip formatter={(v) => compact(v) + ' tokens'} contentStyle={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 11, color: '#374151' }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-2 w-full">
@@ -201,13 +201,13 @@ export default function Costs() {
                   <div key={d.name} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-sm" style={{ background: PIE_COLORS[i] }} />
-                      <span className="text-zinc-400">{d.name}</span>
+                      <span className="text-gray-500">{d.name}</span>
                     </div>
-                    <span className="text-zinc-300 font-medium">{compact(d.value)}</span>
+                    <span className="text-gray-700 font-medium">{compact(d.value)}</span>
                   </div>
                 ))}
                 <div className="pt-1 border-t border-zinc-800 flex items-center justify-between text-xs">
-                  <span className="text-zinc-500">Total</span>
+                  <span className="text-gray-400">Total</span>
                   <span className="text-white font-medium">{compact(totalTokens)} tokens</span>
                 </div>
               </div>
@@ -220,7 +220,7 @@ export default function Costs() {
       <div className="card-sm px-4 py-3 flex items-center gap-3">
         <div className="w-1 h-8 bg-teal-500 rounded-full shrink-0" />
         <div>
-          <p className="text-zinc-300 text-xs font-medium">Claude Sonnet 4.6 pricing (as of July 2026)</p>
+          <p className="text-gray-700 text-xs font-medium">Claude Sonnet 4.6 pricing (as of July 2026)</p>
           <p className="text-zinc-500 text-xs">Input: $3 / 1M tokens · Output: $15 / 1M tokens · SGD conversion: ×1.35</p>
         </div>
       </div>

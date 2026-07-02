@@ -8,20 +8,20 @@ import KPICard from '../components/cards/KPICard'
 import { sgd, compact, num, changePct, shortDate } from '../lib/formatters'
 
 const CHART_COLORS = {
-  primary:   '#14b8a6',
-  secondary: '#3b82f6',
-  danger:    '#f43f5e',
-  grid:      '#27272a',
-  text:      '#71717a',
+  primary:   '#0d9488',
+  secondary: '#2563eb',
+  danger:    '#e11d48',
+  grid:      '#e5e7eb',
+  text:      '#9ca3af',
 }
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-xl">
-      <p className="text-zinc-400 text-xs mb-2">{label}</p>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+      <p className="text-gray-500 text-xs mb-2">{label}</p>
       {payload.map((e, i) => (
-        <p key={i} className="text-xs font-medium" style={{ color: e.color }}>
+        <p key={i} className="text-xs font-medium text-gray-700">
           {e.name}: {e.value}
         </p>
       ))}
@@ -34,9 +34,9 @@ function HealthScore({ escalationRate }) {
   const pct = Number(escalationRate)
   const status = pct < 3 ? 'green' : pct < 6 ? 'yellow' : 'red'
   const map = {
-    green:  { label: 'Healthy',  bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
-    yellow: { label: 'Monitor',  bg: 'bg-amber-500/10',   text: 'text-amber-400',   dot: 'bg-amber-400' },
-    red:    { label: 'Elevated', bg: 'bg-rose-500/10',    text: 'text-rose-400',    dot: 'bg-rose-400' },
+    green:  { label: 'Healthy',  bg: 'bg-emerald-50 border border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+    yellow: { label: 'Monitor',  bg: 'bg-amber-50 border border-amber-200',     text: 'text-amber-700',   dot: 'bg-amber-500' },
+    red:    { label: 'Elevated', bg: 'bg-rose-50 border border-rose-200',       text: 'text-rose-700',    dot: 'bg-rose-500' },
   }
   const s = map[status]
   return (

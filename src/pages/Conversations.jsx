@@ -7,20 +7,20 @@ import UsageHeatmap from '../components/charts/UsageHeatmap'
 import { shortDate, num, compact } from '../lib/formatters'
 
 const CHART_COLORS = {
-  primary:   '#14b8a6',
-  secondary: '#3b82f6',
-  danger:    '#f43f5e',
-  grid:      '#27272a',
-  text:      '#71717a',
+  primary:   '#0d9488',
+  secondary: '#2563eb',
+  danger:    '#e11d48',
+  grid:      '#e5e7eb',
+  text:      '#9ca3af',
 }
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-xl">
-      <p className="text-zinc-400 text-xs mb-2">{label}</p>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+      <p className="text-gray-500 text-xs mb-2">{label}</p>
       {payload.map((e, i) => (
-        <p key={i} className="text-xs font-medium" style={{ color: e.color }}>
+        <p key={i} className="text-xs font-medium text-gray-700">
           {e.name}: {e.value}
         </p>
       ))}
@@ -83,21 +83,21 @@ export default function Conversations() {
           { label: 'Tool Calls (AI)',       value: compact(stats?.toolCalls ?? 0), sub: 'clinical advisor queries' },
         ].map(({ label, value, sub }) => (
           <div key={label} className="card p-5">
-            <p className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-2">{label}</p>
-            <p className="text-3xl font-bold text-white">{loading ? '—' : value}</p>
-            <p className="text-zinc-500 text-xs mt-1">{sub}</p>
+            <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-2">{label}</p>
+            <p className="text-3xl font-bold text-gray-900">{loading ? '—' : value}</p>
+            <p className="text-gray-400 text-xs mt-1">{sub}</p>
           </div>
         ))}
       </div>
 
       {/* Messages per day */}
       <div className="card p-5">
-        <h3 className="text-white text-sm font-semibold mb-1">Messages per Day</h3>
-        <p className="text-zinc-500 text-xs mb-4">User messages sent and AI responses generated each day</p>
+        <h3 className="text-gray-900 text-sm font-semibold mb-1">Messages per Day</h3>
+        <p className="text-gray-400 text-xs mb-4">User messages sent and AI responses generated each day</p>
         {loading ? (
           <div className="skeleton h-56 rounded" />
         ) : msgChartData.length === 0 ? (
-          <div className="flex items-center justify-center h-56 text-zinc-600 text-sm">
+          <div className="flex items-center justify-center h-56 text-gray-400 text-sm">
             No data yet — conversations will appear here
           </div>
         ) : (
@@ -118,19 +118,19 @@ export default function Conversations() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Peak usage heatmap */}
         <div className="card p-5">
-          <h3 className="text-white text-sm font-semibold mb-1">Peak Usage Hours</h3>
-          <p className="text-zinc-500 text-xs mb-4">When mums reach out — hour × day of week (Singapore time)</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">Peak Usage Hours</h3>
+          <p className="text-gray-400 text-xs mb-4">When mums reach out — hour × day of week (Singapore time)</p>
           {loading ? <div className="skeleton h-44 rounded" /> : <UsageHeatmap data={heatmap} loading={false} />}
         </div>
 
         {/* Escalation rate trend */}
         <div className="card p-5">
-          <h3 className="text-white text-sm font-semibold mb-1">Escalation Rate Trend</h3>
-          <p className="text-zinc-500 text-xs mb-4">% of sessions that triggered the crisis escalation path</p>
+          <h3 className="text-gray-900 text-sm font-semibold mb-1">Escalation Rate Trend</h3>
+          <p className="text-gray-400 text-xs mb-4">% of sessions that triggered the crisis escalation path</p>
           {loading ? (
             <div className="skeleton h-44 rounded" />
           ) : !hasStats ? (
-            <div className="flex items-center justify-center h-44 text-zinc-600 text-sm text-center px-8">
+            <div className="flex items-center justify-center h-44 text-gray-400 text-sm text-center px-8">
               Available after n8n logging is active — see setup guide
             </div>
           ) : (

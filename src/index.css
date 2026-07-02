@@ -7,8 +7,8 @@
     box-sizing: border-box;
   }
   body {
-    background-color: #09090b;
-    color: #fafafa;
+    background-color: #f8fafc;
+    color: #0f172a;
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
@@ -17,25 +17,25 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #18181b;
+    background: #f1f5f9;
   }
   ::-webkit-scrollbar-thumb {
-    background: #3f3f46;
+    background: #cbd5e1;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #52525b;
+    background: #94a3b8;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-zinc-900 border border-zinc-800 rounded-xl;
+    @apply bg-white border border-gray-200 rounded-xl shadow-sm;
   }
   .card-sm {
-    @apply bg-zinc-900 border border-zinc-800 rounded-lg;
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm;
   }
   .skeleton {
-    @apply animate-pulse bg-zinc-800 rounded;
+    @apply animate-pulse bg-gray-200 rounded;
   }
 }

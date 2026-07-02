@@ -2,22 +2,20 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 
 const COLOR_MAP = {
-  teal:   { ring: 'bg-teal-500/10',   text: 'text-teal-400',   stroke: '#14b8a6' },
-  blue:   { ring: 'bg-blue-500/10',   text: 'text-blue-400',   stroke: '#3b82f6' },
-  violet: { ring: 'bg-violet-500/10', text: 'text-violet-400', stroke: '#8b5cf6' },
-  amber:  { ring: 'bg-amber-500/10',  text: 'text-amber-400',  stroke: '#f59e0b' },
-  rose:   { ring: 'bg-rose-500/10',   text: 'text-rose-400',   stroke: '#f43f5e' },
+  teal:   { ring: 'bg-teal-50',   text: 'text-teal-600',   stroke: '#0d9488' },
+  blue:   { ring: 'bg-blue-50',   text: 'text-blue-600',   stroke: '#2563eb' },
+  violet: { ring: 'bg-violet-50', text: 'text-violet-600', stroke: '#7c3aed' },
+  amber:  { ring: 'bg-amber-50',  text: 'text-amber-600',  stroke: '#d97706' },
+  rose:   { ring: 'bg-rose-50',   text: 'text-rose-600',   stroke: '#e11d48' },
 }
 
-// sparkline: array of numbers
 export default function KPICard({ title, value, subtitle, change, sparkline = [], color = 'teal', icon: Icon, loading }) {
   const c = COLOR_MAP[color] || COLOR_MAP.teal
 
   const trendPositive = change > 0
   const trendNeutral  = change === 0 || change === null || change === undefined
   const TrendIcon     = trendNeutral ? Minus : trendPositive ? TrendingUp : TrendingDown
-  const trendColor    = trendNeutral ? 'text-zinc-500' : trendPositive ? 'text-emerald-400' : 'text-red-400'
-  const trendBg       = trendNeutral ? '' : trendPositive ? 'text-emerald-400' : 'text-red-400'
+  const trendColor    = trendNeutral ? 'text-gray-400' : trendPositive ? 'text-emerald-600' : 'text-red-500'
 
   const sparkData = sparkline.map((v, i) => ({ i, v }))
 
@@ -34,7 +32,7 @@ export default function KPICard({ title, value, subtitle, change, sparkline = []
   return (
     <div className="card p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-zinc-400 text-xs font-medium uppercase tracking-wide">{title}</span>
+        <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">{title}</span>
         {Icon && (
           <div className={`p-1.5 rounded-lg ${c.ring}`}>
             <Icon size={14} className={c.text} strokeWidth={2} />
@@ -43,8 +41,8 @@ export default function KPICard({ title, value, subtitle, change, sparkline = []
       </div>
 
       <div>
-        <div className="text-3xl font-bold text-white leading-none">{value}</div>
-        {subtitle && <div className="text-zinc-500 text-xs mt-1">{subtitle}</div>}
+        <div className="text-3xl font-bold text-gray-900 leading-none">{value}</div>
+        {subtitle && <div className="text-gray-400 text-xs mt-1">{subtitle}</div>}
       </div>
 
       <div className="flex items-center justify-between">
@@ -54,7 +52,7 @@ export default function KPICard({ title, value, subtitle, change, sparkline = []
             <span>{Math.abs(change).toFixed(1)}% vs prev period</span>
           </div>
         ) : (
-          <span className="text-zinc-600 text-xs">No comparison data</span>
+          <span className="text-gray-300 text-xs">No comparison data</span>
         )}
 
         {sparkData.length > 1 && (

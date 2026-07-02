@@ -2,13 +2,13 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
 function cellColor(count, max) {
-  if (!count || !max) return 'bg-zinc-800/50'
+  if (!count || !max) return 'bg-gray-100'
   const ratio = count / max
-  if (ratio >= 0.8) return 'bg-teal-500'
-  if (ratio >= 0.6) return 'bg-teal-500/70'
-  if (ratio >= 0.4) return 'bg-teal-500/45'
-  if (ratio >= 0.2) return 'bg-teal-500/20'
-  return 'bg-teal-500/8'
+  if (ratio >= 0.8) return 'bg-teal-600'
+  if (ratio >= 0.6) return 'bg-teal-400'
+  if (ratio >= 0.4) return 'bg-teal-300'
+  if (ratio >= 0.2) return 'bg-teal-200'
+  return 'bg-teal-100'
 }
 
 function formatHour(h) {
@@ -43,7 +43,7 @@ export default function UsageHeatmap({ data = [], loading }) {
         {HOURS.map(h => (
           <div key={h} className="flex-1 text-center">
             {showHours.includes(h) && (
-              <span className="text-zinc-600 text-[10px]">{formatHour(h)}</span>
+              <span className="text-gray-400 text-[10px]">{formatHour(h)}</span>
             )}
           </div>
         ))}
@@ -52,7 +52,7 @@ export default function UsageHeatmap({ data = [], loading }) {
       {/* Grid */}
       {DAYS.map((day, dow) => (
         <div key={day} className="flex items-center mb-0.5">
-          <span className="text-zinc-500 text-xs w-10 shrink-0">{day}</span>
+          <span className="text-gray-500 text-xs w-10 shrink-0">{day}</span>
           <div className="flex flex-1 gap-0.5">
             {HOURS.map(h => {
               const count = grid[`${dow}-${h}`] || 0
@@ -69,11 +69,11 @@ export default function UsageHeatmap({ data = [], loading }) {
       ))}
 
       <div className="flex items-center gap-2 mt-3 justify-end">
-        <span className="text-zinc-600 text-xs">Less</span>
-        {['bg-zinc-800/50', 'bg-teal-500/20', 'bg-teal-500/45', 'bg-teal-500/70', 'bg-teal-500'].map((cls, i) => (
+        <span className="text-gray-400 text-xs">Less</span>
+        {['bg-gray-100', 'bg-teal-100', 'bg-teal-300', 'bg-teal-400', 'bg-teal-600'].map((cls, i) => (
           <div key={i} className={`w-3 h-3 rounded-sm ${cls}`} />
         ))}
-        <span className="text-zinc-600 text-xs">More</span>
+        <span className="text-gray-400 text-xs">More</span>
       </div>
     </div>
   )

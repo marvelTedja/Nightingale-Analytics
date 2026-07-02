@@ -9,12 +9,12 @@ const COLUMNS = [
 ]
 
 function pctColor(pct) {
-  if (pct === null) return 'bg-zinc-800 text-zinc-600'
-  if (pct >= 70) return 'bg-teal-500/80 text-white'
-  if (pct >= 50) return 'bg-teal-500/50 text-teal-100'
-  if (pct >= 30) return 'bg-teal-500/25 text-teal-300'
-  if (pct >= 10) return 'bg-teal-500/10 text-teal-400'
-  return 'bg-zinc-800 text-zinc-500'
+  if (pct === null) return 'bg-gray-100 text-gray-300'
+  if (pct >= 70) return 'bg-teal-600 text-white'
+  if (pct >= 50) return 'bg-teal-400 text-white'
+  if (pct >= 30) return 'bg-teal-200 text-teal-800'
+  if (pct >= 10) return 'bg-teal-100 text-teal-700'
+  return 'bg-gray-100 text-gray-400'
 }
 
 // userRows: [{ firstDay, days: ['2026-06-01', ...] }]
@@ -53,7 +53,7 @@ export default function RetentionHeatmap({ rows = [], loading }) {
 
   if (!rows.length) {
     return (
-      <div className="flex items-center justify-center h-48 text-zinc-600 text-sm">
+      <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
         No data yet — retention will appear after users return
       </div>
     )
@@ -76,8 +76,8 @@ export default function RetentionHeatmap({ rows = [], loading }) {
         <tbody>
           {cohorts.map(row => (
             <tr key={row.cohort}>
-              <td className="text-zinc-400 text-xs py-1.5 pr-4 whitespace-nowrap">{row.cohort}</td>
-              <td className="text-center text-zinc-400 text-xs py-1.5 px-2">{row.total}</td>
+              <td className="text-gray-600 text-xs py-1.5 pr-4 whitespace-nowrap">{row.cohort}</td>
+              <td className="text-center text-gray-500 text-xs py-1.5 px-2">{row.total}</td>
               {row.retention.map((pct, i) => (
                 <td key={i} className="py-1.5 px-2">
                   <div className={`rounded-md px-2 py-1.5 text-center text-xs font-medium ${pctColor(pct)}`}>
@@ -89,12 +89,12 @@ export default function RetentionHeatmap({ rows = [], loading }) {
           ))}
         </tbody>
       </table>
-      <div className="flex items-center gap-3 mt-4 pt-4 border-t border-zinc-800">
-        <span className="text-zinc-600 text-xs">Retention rate:</span>
-        {[['≥70%', 'bg-teal-500/80'], ['50–70%', 'bg-teal-500/50'], ['30–50%', 'bg-teal-500/25'], ['<30%', 'bg-zinc-800']].map(([label, cls]) => (
+      <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+        <span className="text-gray-400 text-xs">Retention rate:</span>
+        {[['≥70%', 'bg-teal-600'], ['50–70%', 'bg-teal-400'], ['30–50%', 'bg-teal-200'], ['<30%', 'bg-gray-100']].map(([label, cls]) => (
           <div key={label} className="flex items-center gap-1.5">
             <div className={`w-3 h-3 rounded ${cls}`} />
-            <span className="text-zinc-500 text-xs">{label}</span>
+            <span className="text-gray-400 text-xs">{label}</span>
           </div>
         ))}
       </div>
