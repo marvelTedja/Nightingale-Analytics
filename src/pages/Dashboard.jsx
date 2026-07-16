@@ -38,8 +38,8 @@ function Change({ pct, inverse = false }) {
 }
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
-function KPI({ label, value, prev, prevLabel, pct, inverse, accent = 'teal', loading }) {
-  const colors = { teal: 'border-t-teal-500', blue: 'border-t-blue-500', rose: 'border-t-rose-500', amber: 'border-t-amber-500' }
+function KPI({ label, value, prevLabel, pct, inverse, accent = 'teal', loading, caption }) {
+  const colors = { teal: 'border-t-teal-500', blue: 'border-t-blue-500', rose: 'border-t-rose-500', amber: 'border-t-amber-500', violet: 'border-t-violet-500' }
   if (loading) return <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><div className="animate-pulse space-y-3"><div className="h-3 bg-gray-200 rounded w-24"/><div className="h-8 bg-gray-200 rounded w-20"/><div className="h-3 bg-gray-200 rounded w-16"/></div></div>
 
   return (
@@ -47,8 +47,14 @@ function KPI({ label, value, prev, prevLabel, pct, inverse, accent = 'teal', loa
       <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-3">{label}</p>
       <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
       <div className="flex items-center gap-2">
-        <Change pct={pct} inverse={inverse} />
-        {prevLabel && <span className="text-gray-400 text-xs">vs {prevLabel}</span>}
+        {(pct != null || prevLabel) ? (
+          <>
+            <Change pct={pct} inverse={inverse} />
+            {prevLabel && <span className="text-gray-400 text-xs">vs {prevLabel}</span>}
+          </>
+        ) : (
+          <span className="text-gray-400 text-xs">{caption || '—'}</span>
+        )}
       </div>
     </div>
   )
@@ -137,6 +143,8 @@ export default function Dashboard() {
   const curr = data?.current
   const prev = data?.previous
   const esc  = data?.escalation
+  const subs = data?.subscriptions
+  const rev  = data?.revenue
   const weekly   = data?.weekly || []
   const retention = data?.retention || []
 
@@ -214,7 +222,40 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ── 2. Avg Conversations per Week ── */}
+      {/* ── 2. Subscription / Revenue row ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <KPI
+          label="Trial Users"
+          value={loading ? '—' : num(subs?.trial ?? 0)}
+          accent="blue"
+          caption="currently in free trial"
+          loading={loading}
+        />
+        <KPI
+          label="Paid Users"
+          value={loading ? '—' : num(subs?.paid ?? 0)}
+          accent="teal"
+          caption="currently subscribed"
+          loading={loading}
+        />
+        <KPI
+          label="Trial → Paid Conversion"
+          value={loading ? '—' : `${(subs?.conversionRate ?? 0).toFixed(1)}%`}
+          accent="amber"
+          caption={`${subs?.paid ?? 0} of ${subs?.total ?? 0} users converted`}
+          loading={loading}
+        />
+        <KPI
+          label="Total Revenue"
+          value={loading ? '—' : sgd(rev?.current ?? 0)}
+          pct={changePct(rev?.current, rev?.previous)}
+          prevLabel={prevLabel}
+          accent="violet"
+          loading={loading}
+        />
+      </div>
+
+      {/* ── 3. Avg Conversations per Week ── */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-4">
         <Section
           title="Average Conversations per Week"
@@ -250,7 +291,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── 3. Retention Week 1–5 ── */}
+      {/* ── 4. Retention Week 1–5 ── */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-4">
         <Section
           title="Week 1–5 Retention"
@@ -259,7 +300,7 @@ export default function Dashboard() {
         <RetentionSimple data={retention} loading={loading} />
       </div>
 
-      {/* ── 4. Cost breakdown ── */}
+      {/* ── 5. Cost breakdown ── */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-4">
         <Section
           title="API Cost Breakdown"
@@ -290,7 +331,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── 5. Escalation detail ── */}
+      {/* ── 6. Escalation detail ── */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
         <Section
           title="Escalation Rate"

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { getAnalytics, getWeeklyBreakdown, getRetention } from '../lib/queries'
+import { getAnalytics, getWeeklyBreakdown, getRetention, getSubscriptionStats, getTotalRevenue } from '../lib/queries'
 
 const Ctx = createContext(null)
 
@@ -13,12 +13,14 @@ export function AnalyticsProvider({ children }) {
     setLoading(true)
     setError(null)
     try {
-      const [analytics, weekly, retention] = await Promise.all([
+      const [analytics, weekly, retention, subscriptions, revenue] = await Promise.all([
         getAnalytics(d),
         getWeeklyBreakdown(d),
         getRetention(),
+        getSubscriptionStats(),
+        getTotalRevenue(d),
       ])
-      setData({ ...analytics, weekly, retention })
+      setData({ ...analytics, weekly, retention, subscriptions, revenue })
     } catch (err) {
       setError(err.message)
     } finally {

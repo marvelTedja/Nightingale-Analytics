@@ -77,6 +77,9 @@ export async function getAnalytics(days) {
   const current  = deriveMetrics(currentRows, days)
   const previous = deriveMetrics(previousRows, days)
 
+  escalationData.currentRate  = current.conversations  > 0 ? (escalationData.current  / current.conversations)  * 100 : 0
+  escalationData.previousRate = previous.conversations > 0 ? (escalationData.previous / previous.conversations) * 100 : 0
+
   return { current, previous, days, escalation: escalationData }
 }
 
@@ -157,40 +160,71 @@ export async function getRetention() {
     })
 }
 
+// ─── Subscription stats (live counts — not period-filtered) ──────────────────
+
+export async function getSubscriptionStats() {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('subscription_status')
+
+  if (error) { console.error('getSubscriptionStats:', error); return { trial: 0, paid: 0, expired: 0, total: 0, conversionRate: 0 } }
+
+  const rows    = data || []
+  const trial   = rows.filter(r => r.subscription_status === 'trial').length
+  const paid    = rows.filter(r => r.subscription_status === 'active').length
+  const expired = rows.filter(r => r.subscription_status === 'expired').length
+  const total   = rows.length
+  return { trial, paid, expired, total, conversionRate: total > 0 ? (paid / total) * 100 : 0 }
+}
+
+// ─── Revenue (tied to selected date range) ────────────────────────────────────
+
+export async function getTotalRevenue(days) {
+  const since    = isoStr(days)
+  const prevSince = isoStr(days * 2)
+
+  const [{ data: curr, error: e1 }, { data: prev, error: e2 }] = await Promise.all([
+    supabase.from('payments').select('amount, status').gte('created_at', since),
+    supabase.from('payments').select('amount, status').gte('created_at', prevSince).lt('created_at', since),
+  ])
+
+  if (e1) console.error('getTotalRevenue current:', e1)
+  if (e2) console.error('getTotalRevenue previous:', e2)
+
+  const SUCCESS = ['completed', 'succeeded', 'paid', 'success']
+  const sum = rows => (rows || [])
+    .filter(r => SUCCESS.includes((r.status || '').toLowerCase()))
+    .reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
+
+  return { current: sum(curr), previous: sum(prev) }
+}
+
 // ─── Escalations ─────────────────────────────────────────────────────────────
 
 export async function getEscalations(days) {
-  const since = isoStr(days)
+  const since    = isoStr(days)
   const prevSince = isoStr(days * 2)
 
-  // Try sessions table first
-  const { data: current, error: e1 } = await supabase
-    .from('sessions')
-    .select('id, escalated, started_at')
-    .gte('started_at', since)
+  const [{ data: currRows, error: e1 }, { data: prevRows, error: e2 }] = await Promise.all([
+    supabase
+      .from('sessions')
+      .select('session_key, started_at, escalated')
+      .gte('started_at', since),
+    supabase
+      .from('sessions')
+      .select('session_key, started_at, escalated')
+      .gte('started_at', prevSince)
+      .lt('started_at', since),
+  ])
 
-  const { data: previous, error: e2 } = await supabase
-    .from('sessions')
-    .select('id, escalated, started_at')
-    .gte('started_at', prevSince)
-    .lt('started_at', since)
+  if (e1) console.error('getEscalations current:', e1)
+  if (e2) console.error('getEscalations previous:', e2)
 
-  if (!e1 && current) {
-    const currEsc  = (current || []).filter(s => s.escalated).length
-    const prevEsc  = (previous || []).filter(s => s.escalated).length
-    const currTotal = current.length
-    const prevTotal = previous.length
-    return {
-      source:       'sessions',
-      current:      currEsc,
-      previous:     prevEsc,
-      currentTotal: currTotal,
-      previousTotal: prevTotal,
-      currentRate:  currTotal > 0 ? (currEsc / currTotal) * 100 : 0,
-      previousRate: prevTotal > 0 ? (prevEsc / prevTotal) * 100 : 0,
-    }
+  return {
+    source:      'sessions',
+    current:     (currRows || []).filter(r => r.escalated).length,
+    previous:    (prevRows || []).filter(r => r.escalated).length,
+    currentRate:  0,
+    previousRate: 0,
   }
-
-  // Fallback: no escalation data yet
-  return { source: 'none', current: 0, previous: 0, currentTotal: 0, previousTotal: 0, currentRate: 0, previousRate: 0 }
 }
